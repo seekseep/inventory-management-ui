@@ -1,0 +1,23 @@
+{
+  "projectName": "inventory-management-ui",
+  "mode": "file-router",
+  "typescript": true,
+  "packageManager": "npm",
+  "includeExamples": false,
+  "tailwind": true,
+  "addOnOptions": {},
+  "envVarValues": {},
+  "git": true,
+  "install": true,
+  "routerOnly": false,
+  "version": 1,
+  "framework": "react",
+  "chosenAddOns": [
+    "eslint",
+    "cloudflare",
+    "form",
+    "table",
+    "tanstack-query",
+    "shadcn"
+  ]
+}
