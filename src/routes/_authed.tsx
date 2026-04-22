@@ -1,9 +1,10 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ApiKeyDialog } from '#/components/ApiKeyDialog'
 import { AppBreadcrumbs } from '#/components/AppBreadcrumbs'
 import { AppSidebar } from '#/components/AppSidebar'
 import { SidebarInset, SidebarProvider } from '#/components/ui/sidebar'
+import { API_UNAUTHORIZED_EVENT } from '#/lib/api-client'
 import { isAuthenticated } from '#/lib/auth'
 
 export const Route = createFileRoute('/_authed')({
@@ -12,6 +13,13 @@ export const Route = createFileRoute('/_authed')({
 
 function AuthedLayout() {
   const [authenticated, setAuthenticated] = useState(isAuthenticated())
+
+  useEffect(() => {
+    const handleUnauthorized = () => setAuthenticated(false)
+    window.addEventListener(API_UNAUTHORIZED_EVENT, handleUnauthorized)
+    return () =>
+      window.removeEventListener(API_UNAUTHORIZED_EVENT, handleUnauthorized)
+  }, [])
 
   return (
     <>

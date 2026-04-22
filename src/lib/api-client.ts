@@ -1,5 +1,7 @@
-import { getApiKey } from '#/lib/auth'
+import { clearApiKey, getApiKey } from '#/lib/auth'
 import { API_BASE_URL, API_KEY_HEADER } from '#/lib/constants'
+
+export const API_UNAUTHORIZED_EVENT = 'api:unauthorized'
 
 export class ApiError extends Error {
   constructor(
@@ -32,6 +34,10 @@ export async function apiGet<T>(
   })
 
   if (!res.ok) {
+    if (res.status === 401) {
+      clearApiKey()
+      window.dispatchEvent(new Event(API_UNAUTHORIZED_EVENT))
+    }
     const body = await res.text()
     throw new ApiError(res.status, body)
   }

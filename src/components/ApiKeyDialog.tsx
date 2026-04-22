@@ -74,6 +74,7 @@ export function ApiKeyDialog({ open, onAuthenticated }: ApiKeyDialogProps) {
                 <Input
                   id="api-key"
                   type="password"
+                  autoComplete="off"
                   placeholder="API キーを入力"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
