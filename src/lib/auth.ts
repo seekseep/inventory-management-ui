@@ -1,4 +1,4 @@
-const API_KEY_STORAGE_KEY = 'inventory-api-key'
+import { API_KEY_STORAGE_KEY } from '#/lib/constants'
 
 export function getApiKey(): string | null {
   if (typeof window === 'undefined') return null

@@ -14,10 +14,10 @@ import {
   TransactionTypeBadge,
   StockStatusBadge,
 } from '#/components/StatusBadge'
-import { useItems } from '#/hooks/use-items'
-import { useLocations } from '#/hooks/use-locations'
-import { useInventories } from '#/hooks/use-inventories'
-import { useTransactions } from '#/hooks/use-transactions'
+import { useInventories } from '#/lib/api/inventories'
+import { useItems } from '#/lib/api/items'
+import { useLocations } from '#/lib/api/locations'
+import { useTransactions } from '#/lib/api/transactions'
 
 export const Route = createFileRoute('/_authed/')({
   staticData: { title: 'ダッシュボード' },

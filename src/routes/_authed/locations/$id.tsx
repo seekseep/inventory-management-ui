@@ -3,9 +3,9 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
 import { DetailCard } from '#/components/DetailCard'
 import { LocationTypeBadge, StockStatusBadge } from '#/components/StatusBadge'
-import { useInventories } from '#/hooks/use-inventories'
-import { useItems } from '#/hooks/use-items'
-import { useLocation } from '#/hooks/use-locations'
+import { useInventories } from '#/lib/api/inventories'
+import { useItems } from '#/lib/api/items'
+import { useLocation } from '#/lib/api/locations'
 import type { Inventory } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/locations/$id')({

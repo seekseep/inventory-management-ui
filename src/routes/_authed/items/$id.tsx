@@ -7,10 +7,10 @@ import {
   ItemTypeBadge,
   StockStatusBadge,
 } from '#/components/StatusBadge'
-import { useItem } from '#/hooks/use-items'
-import { useItemCategories } from '#/hooks/use-item-categories'
-import { useInventories } from '#/hooks/use-inventories'
-import { useLocations } from '#/hooks/use-locations'
+import { useInventories } from '#/lib/api/inventories'
+import { useItemCategories } from '#/lib/api/item-categories'
+import { useItem } from '#/lib/api/items'
+import { useLocations } from '#/lib/api/locations'
 import type { Inventory } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/items/$id')({

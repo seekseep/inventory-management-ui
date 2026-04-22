@@ -1,7 +1,7 @@
 import { useNavigate, createFileRoute } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
-import { useItemCategories } from '#/hooks/use-item-categories'
+import { useItemCategories } from '#/lib/api/item-categories'
 import type { ItemCategory } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/item-categories/')({

@@ -1,8 +1,8 @@
 import { useNavigate, createFileRoute } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
-import { useLocations } from '#/hooks/use-locations'
-import { useSnapshots } from '#/hooks/use-snapshots'
+import { useLocations } from '#/lib/api/locations'
+import { useSnapshots } from '#/lib/api/snapshots'
 import type { Snapshot } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/snapshots/')({

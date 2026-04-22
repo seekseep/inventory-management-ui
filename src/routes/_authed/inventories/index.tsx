@@ -2,9 +2,9 @@ import { useNavigate, createFileRoute } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
 import { StockStatusBadge } from '#/components/StatusBadge'
-import { useInventories } from '#/hooks/use-inventories'
-import { useItems } from '#/hooks/use-items'
-import { useLocations } from '#/hooks/use-locations'
+import { useInventories } from '#/lib/api/inventories'
+import { useItems } from '#/lib/api/items'
+import { useLocations } from '#/lib/api/locations'
 import type { Inventory } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/inventories/')({

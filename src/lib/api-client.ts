@@ -1,4 +1,5 @@
 import { getApiKey } from '#/lib/auth'
+import { API_BASE_URL, API_KEY_HEADER } from '#/lib/constants'
 
 export class ApiError extends Error {
   constructor(
@@ -10,15 +11,11 @@ export class ApiError extends Error {
   }
 }
 
-function getBaseUrl(): string {
-  return import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787'
-}
-
 export async function apiGet<T>(
   path: string,
   params?: Record<string, string>,
 ): Promise<T> {
-  const url = new URL(path, getBaseUrl())
+  const url = new URL(path, API_BASE_URL)
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value) {
@@ -30,7 +27,7 @@ export async function apiGet<T>(
   const apiKey = getApiKey()
   const res = await fetch(url.toString(), {
     headers: {
-      ...(apiKey ? { 'X-API-Key': apiKey } : {}),
+      ...(apiKey ? { [API_KEY_HEADER]: apiKey } : {}),
     },
   })
 
@@ -46,9 +43,9 @@ export async function apiGetWithKey<T>(
   path: string,
   apiKey: string,
 ): Promise<T> {
-  const url = new URL(path, getBaseUrl())
+  const url = new URL(path, API_BASE_URL)
   const res = await fetch(url.toString(), {
-    headers: { 'X-API-Key': apiKey },
+    headers: { [API_KEY_HEADER]: apiKey },
   })
 
   if (!res.ok) {

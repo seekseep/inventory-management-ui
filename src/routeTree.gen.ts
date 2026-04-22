@@ -9,10 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as GuestRouteImport } from './routes/_guest'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
-import { Route as GuestLoginRouteImport } from './routes/_guest/login'
 import { Route as AuthedTransactionsIndexRouteImport } from './routes/_authed/transactions/index'
 import { Route as AuthedSnapshotsIndexRouteImport } from './routes/_authed/snapshots/index'
 import { Route as AuthedLocationsIndexRouteImport } from './routes/_authed/locations/index'
@@ -26,10 +24,6 @@ import { Route as AuthedItemsIdRouteImport } from './routes/_authed/items/$id'
 import { Route as AuthedItemCategoriesIdRouteImport } from './routes/_authed/item-categories/$id'
 import { Route as AuthedInventoriesIdRouteImport } from './routes/_authed/inventories/$id'
 
-const GuestRoute = GuestRouteImport.update({
-  id: '/_guest',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
@@ -38,11 +32,6 @@ const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedRoute,
-} as any)
-const GuestLoginRoute = GuestLoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => GuestRoute,
 } as any)
 const AuthedTransactionsIndexRoute = AuthedTransactionsIndexRouteImport.update({
   id: '/transactions/',
@@ -108,7 +97,6 @@ const AuthedInventoriesIdRoute = AuthedInventoriesIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
-  '/login': typeof GuestLoginRoute
   '/inventories/$id': typeof AuthedInventoriesIdRoute
   '/item-categories/$id': typeof AuthedItemCategoriesIdRoute
   '/items/$id': typeof AuthedItemsIdRoute
@@ -124,7 +112,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof AuthedIndexRoute
-  '/login': typeof GuestLoginRoute
   '/inventories/$id': typeof AuthedInventoriesIdRoute
   '/item-categories/$id': typeof AuthedItemCategoriesIdRoute
   '/items/$id': typeof AuthedItemsIdRoute
@@ -141,8 +128,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
-  '/_guest': typeof GuestRouteWithChildren
-  '/_guest/login': typeof GuestLoginRoute
   '/_authed/': typeof AuthedIndexRoute
   '/_authed/inventories/$id': typeof AuthedInventoriesIdRoute
   '/_authed/item-categories/$id': typeof AuthedItemCategoriesIdRoute
@@ -161,7 +146,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/login'
     | '/inventories/$id'
     | '/item-categories/$id'
     | '/items/$id'
@@ -177,7 +161,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/login'
     | '/inventories/$id'
     | '/item-categories/$id'
     | '/items/$id'
@@ -193,8 +176,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authed'
-    | '/_guest'
-    | '/_guest/login'
     | '/_authed/'
     | '/_authed/inventories/$id'
     | '/_authed/item-categories/$id'
@@ -212,18 +193,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
-  GuestRoute: typeof GuestRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_guest': {
-      id: '/_guest'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof GuestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authed': {
       id: '/_authed'
       path: ''
@@ -237,13 +210,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthedIndexRouteImport
       parentRoute: typeof AuthedRoute
-    }
-    '/_guest/login': {
-      id: '/_guest/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof GuestLoginRouteImport
-      parentRoute: typeof GuestRoute
     }
     '/_authed/transactions/': {
       id: '/_authed/transactions/'
@@ -367,19 +333,8 @@ const AuthedRouteChildren: AuthedRouteChildren = {
 const AuthedRouteWithChildren =
   AuthedRoute._addFileChildren(AuthedRouteChildren)
 
-interface GuestRouteChildren {
-  GuestLoginRoute: typeof GuestLoginRoute
-}
-
-const GuestRouteChildren: GuestRouteChildren = {
-  GuestLoginRoute: GuestLoginRoute,
-}
-
-const GuestRouteWithChildren = GuestRoute._addFileChildren(GuestRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
-  GuestRoute: GuestRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -2,7 +2,7 @@ import { useNavigate, createFileRoute } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
 import { LocationTypeBadge } from '#/components/StatusBadge'
-import { useLocations } from '#/hooks/use-locations'
+import { useLocations } from '#/lib/api/locations'
 import type { Location } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/locations/')({

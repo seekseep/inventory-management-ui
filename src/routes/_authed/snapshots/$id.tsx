@@ -3,9 +3,9 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
 import { DetailCard } from '#/components/DetailCard'
 import { Badge } from '#/components/ui/badge'
-import { useItems } from '#/hooks/use-items'
-import { useLocations } from '#/hooks/use-locations'
-import { useSnapshot } from '#/hooks/use-snapshots'
+import { useItems } from '#/lib/api/items'
+import { useLocations } from '#/lib/api/locations'
+import { useSnapshot } from '#/lib/api/snapshots'
 import type { SnapshotItem } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/snapshots/$id')({

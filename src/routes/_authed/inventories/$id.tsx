@@ -1,9 +1,9 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { DetailCard } from '#/components/DetailCard'
 import { StockStatusBadge } from '#/components/StatusBadge'
-import { useInventory } from '#/hooks/use-inventories'
-import { useItems } from '#/hooks/use-items'
-import { useLocations } from '#/hooks/use-locations'
+import { useInventory } from '#/lib/api/inventories'
+import { useItems } from '#/lib/api/items'
+import { useLocations } from '#/lib/api/locations'
 
 export const Route = createFileRoute('/_authed/inventories/$id')({
   staticData: { title: '在庫詳細' },

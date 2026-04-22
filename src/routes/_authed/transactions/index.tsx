@@ -2,8 +2,8 @@ import { useNavigate, createFileRoute } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
 import { TransactionTypeBadge } from '#/components/StatusBadge'
-import { useLocations } from '#/hooks/use-locations'
-import { useTransactions } from '#/hooks/use-transactions'
+import { useLocations } from '#/lib/api/locations'
+import { useTransactions } from '#/lib/api/transactions'
 import type { Transaction } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/transactions/')({

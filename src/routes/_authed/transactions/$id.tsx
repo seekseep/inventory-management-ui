@@ -3,9 +3,9 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
 import { DetailCard } from '#/components/DetailCard'
 import { TransactionTypeBadge } from '#/components/StatusBadge'
-import { useItems } from '#/hooks/use-items'
-import { useLocations } from '#/hooks/use-locations'
-import { useTransaction } from '#/hooks/use-transactions'
+import { useItems } from '#/lib/api/items'
+import { useLocations } from '#/lib/api/locations'
+import { useTransaction } from '#/lib/api/transactions'
 import type { TransactionItem } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/transactions/$id')({

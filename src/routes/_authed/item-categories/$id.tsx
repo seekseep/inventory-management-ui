@@ -3,8 +3,8 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
 import { DetailCard } from '#/components/DetailCard'
 import { ItemStatusBadge, ItemTypeBadge } from '#/components/StatusBadge'
-import { useItemCategories, useItemCategory } from '#/hooks/use-item-categories'
-import { useItems } from '#/hooks/use-items'
+import { useItemCategories, useItemCategory } from '#/lib/api/item-categories'
+import { useItems } from '#/lib/api/items'
 import type { Item } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/item-categories/$id')({
