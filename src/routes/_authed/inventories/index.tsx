@@ -7,9 +7,15 @@ import { useItems } from '#/lib/api/items'
 import { useLocations } from '#/lib/api/locations'
 import type { Inventory } from '#/lib/types'
 
+type SearchParams = { q?: string; page?: number }
+
 export const Route = createFileRoute('/_authed/inventories/')({
   staticData: { title: '在庫' },
   component: InventoryCollection,
+  validateSearch: (search: Record<string, unknown>): SearchParams => ({
+    q: (search.q as string) || undefined,
+    page: Number(search.page) || undefined,
+  }),
 })
 
 const columnHelper = createColumnHelper<
@@ -41,6 +47,7 @@ const columns = [
 
 function InventoryCollection() {
   const navigate = useNavigate()
+  const { q, page } = Route.useSearch()
   const { data: inventories, isLoading } = useInventories()
   const { data: items } = useItems()
   const { data: locations } = useLocations()
@@ -61,6 +68,27 @@ function InventoryCollection() {
         columns={columns}
         data={data}
         isLoading={isLoading}
+        globalFilter={q ?? ''}
+        onGlobalFilterChange={(value) =>
+          navigate({
+            search: (prev: SearchParams) => ({
+              ...prev,
+              q: value || undefined,
+              page: undefined,
+            }),
+            replace: true,
+          })
+        }
+        pageIndex={page ? page - 1 : 0}
+        onPageIndexChange={(index) =>
+          navigate({
+            search: (prev: SearchParams) => ({
+              ...prev,
+              page: index > 0 ? index + 1 : undefined,
+            }),
+            replace: true,
+          })
+        }
         onRowClick={(row) =>
           navigate({ to: '/inventories/$id', params: { id: row.id } })
         }

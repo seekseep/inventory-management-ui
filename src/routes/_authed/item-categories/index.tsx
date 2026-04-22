@@ -4,9 +4,15 @@ import { DataTable } from '#/components/DataTable'
 import { useItemCategories } from '#/lib/api/item-categories'
 import type { ItemCategory } from '#/lib/types'
 
+type SearchParams = { q?: string; page?: number }
+
 export const Route = createFileRoute('/_authed/item-categories/')({
   staticData: { title: 'カテゴリ' },
   component: ItemCategoryCollection,
+  validateSearch: (search: Record<string, unknown>): SearchParams => ({
+    q: (search.q as string) || undefined,
+    page: Number(search.page) || undefined,
+  }),
 })
 
 const columnHelper = createColumnHelper<
@@ -27,6 +33,7 @@ const columns = [
 
 function ItemCategoryCollection() {
   const navigate = useNavigate()
+  const { q, page } = Route.useSearch()
   const { data, isLoading } = useItemCategories()
 
   const categories = (data ?? []).map((cat) => ({
@@ -43,6 +50,27 @@ function ItemCategoryCollection() {
         columns={columns}
         data={categories}
         isLoading={isLoading}
+        globalFilter={q ?? ''}
+        onGlobalFilterChange={(value) =>
+          navigate({
+            search: (prev: SearchParams) => ({
+              ...prev,
+              q: value || undefined,
+              page: undefined,
+            }),
+            replace: true,
+          })
+        }
+        pageIndex={page ? page - 1 : 0}
+        onPageIndexChange={(index) =>
+          navigate({
+            search: (prev: SearchParams) => ({
+              ...prev,
+              page: index > 0 ? index + 1 : undefined,
+            }),
+            replace: true,
+          })
+        }
         onRowClick={(row) =>
           navigate({ to: '/item-categories/$id', params: { id: row.id } })
         }

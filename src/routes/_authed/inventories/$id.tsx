@@ -1,9 +1,24 @@
+import { useMemo } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { DetailCard } from '#/components/DetailCard'
 import { StockStatusBadge } from '#/components/StatusBadge'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
+import { Skeleton } from '#/components/ui/skeleton'
 import { useInventory } from '#/lib/api/inventories'
 import { useItems } from '#/lib/api/items'
 import { useLocations } from '#/lib/api/locations'
+import { useTransactionsWithItems } from '#/lib/api/transactions'
+import { computeStockTimeline } from '#/lib/chart-utils'
 
 export const Route = createFileRoute('/_authed/inventories/$id')({
   staticData: { title: '在庫詳細' },
@@ -15,9 +30,21 @@ function InventorySingle() {
   const { data: inventory, isLoading } = useInventory(id)
   const { data: items } = useItems()
   const { data: locations } = useLocations()
+  const { data: txsWithItems, isLoading: isTxLoading } =
+    useTransactionsWithItems()
 
   const item = items?.find((i) => i.id === inventory?.itemId)
   const location = locations?.find((l) => l.id === inventory?.locationId)
+
+  const stockTimeline = useMemo(() => {
+    if (!txsWithItems || !inventory) return []
+    return computeStockTimeline(
+      txsWithItems,
+      inventory.itemId,
+      inventory.locationId,
+      inventory.quantity,
+    )
+  }, [txsWithItems, inventory])
 
   return (
     <div className="space-y-6">
@@ -92,6 +119,51 @@ function InventorySingle() {
           />
         )}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">在庫推移</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isTxLoading ? (
+            <Skeleton className="h-64 w-full" />
+          ) : stockTimeline.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              在庫推移データがありません
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={stockTimeline}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" fontSize={12} />
+                <YAxis allowDecimals={false} fontSize={12} />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="quantity"
+                  name="在庫数"
+                  stroke="hsl(221, 83%, 53%)"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
+                {inventory && (
+                  <ReferenceLine
+                    y={inventory.safetyStock}
+                    stroke="hsl(0, 84%, 60%)"
+                    strokeDasharray="5 5"
+                    label={{
+                      value: `安全在庫: ${inventory.safetyStock}`,
+                      position: 'insideTopRight',
+                      fontSize: 12,
+                      fill: 'hsl(0, 84%, 60%)',
+                    }}
+                  />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

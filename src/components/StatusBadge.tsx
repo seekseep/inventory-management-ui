@@ -1,52 +1,49 @@
 import { Badge } from '#/components/ui/badge'
 
+type BadgeVariant =
+  | 'default'
+  | 'secondary'
+  | 'destructive'
+  | 'outline'
+  | 'green'
+  | 'blue'
+  | 'amber'
+  | 'purple'
+  | 'red'
+
 const itemStatusConfig: Record<
   string,
-  {
-    label: string
-    variant: 'default' | 'secondary' | 'destructive' | 'outline'
-  }
+  { label: string; variant: BadgeVariant }
 > = {
   draft: { label: '下書き', variant: 'secondary' },
-  active: { label: '有効', variant: 'default' },
-  on_sale: { label: 'セール中', variant: 'outline' },
-  discontinued: { label: '廃止', variant: 'destructive' },
+  active: { label: '有効', variant: 'green' },
+  on_sale: { label: 'セール中', variant: 'blue' },
+  discontinued: { label: '廃止', variant: 'red' },
 }
 
-const itemTypeConfig: Record<
-  string,
+const itemTypeConfig: Record<string, { label: string; variant: BadgeVariant }> =
   {
-    label: string
-    variant: 'default' | 'secondary' | 'destructive' | 'outline'
+    staple: { label: '定番', variant: 'blue' },
+    seasonal: { label: 'シーズン', variant: 'amber' },
+    limited: { label: '限定', variant: 'purple' },
   }
-> = {
-  staple: { label: '定番', variant: 'default' },
-  seasonal: { label: 'シーズン', variant: 'secondary' },
-  limited: { label: '限定', variant: 'outline' },
-}
 
 const locationTypeConfig: Record<
   string,
-  {
-    label: string
-    variant: 'default' | 'secondary' | 'destructive' | 'outline'
-  }
+  { label: string; variant: BadgeVariant }
 > = {
-  store: { label: '店舗', variant: 'default' },
-  warehouse: { label: '倉庫', variant: 'secondary' },
+  store: { label: '店舗', variant: 'blue' },
+  warehouse: { label: '倉庫', variant: 'amber' },
 }
 
 const transactionTypeConfig: Record<
   string,
-  {
-    label: string
-    variant: 'default' | 'secondary' | 'destructive' | 'outline'
-  }
+  { label: string; variant: BadgeVariant }
 > = {
-  purchase: { label: '仕入', variant: 'default' },
-  transfer: { label: '移動', variant: 'secondary' },
-  sale: { label: '販売', variant: 'outline' },
-  disposal: { label: '廃棄', variant: 'destructive' },
+  purchase: { label: '仕入', variant: 'green' },
+  transfer: { label: '移動', variant: 'blue' },
+  sale: { label: '販売', variant: 'amber' },
+  disposal: { label: '廃棄', variant: 'red' },
 }
 
 export function ItemStatusBadge({ status }: { status: string }) {
@@ -89,10 +86,10 @@ export function StockStatusBadge({
   safetyStock: number
 }) {
   if (quantity === 0) {
-    return <Badge variant="destructive">欠品</Badge>
+    return <Badge variant="red">欠品</Badge>
   }
   if (quantity <= safetyStock) {
-    return <Badge variant="outline">在庫少</Badge>
+    return <Badge variant="amber">在庫少</Badge>
   }
-  return <Badge variant="default">正常</Badge>
+  return <Badge variant="green">正常</Badge>
 }
