@@ -3,6 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
 import { ItemStatusBadge, ItemTypeBadge } from '#/components/StatusBadge'
 import { useItemCategories } from '#/lib/api/item-categories'
+import { useItemVariants } from '#/lib/api/item-variants'
 import { useItems } from '#/lib/api/items'
 import type { Item } from '#/lib/types'
 
@@ -17,10 +18,11 @@ export const Route = createFileRoute('/_authed/items/')({
   }),
 })
 
-const columnHelper = createColumnHelper<Item & { categoryName?: string }>()
+const columnHelper = createColumnHelper<
+  Item & { categoryName?: string; variantCount: number }
+>()
 
 const columns = [
-  columnHelper.accessor('sku', { header: 'SKU' }),
   columnHelper.accessor('name', { header: '名前' }),
   columnHelper.accessor('type', {
     header: 'タイプ',
@@ -30,12 +32,8 @@ const columns = [
     header: 'ステータス',
     cell: (info) => <ItemStatusBadge status={info.getValue()} />,
   }),
-  columnHelper.accessor('color', {
-    header: '色',
-    cell: (info) => info.getValue() ?? '—',
-  }),
-  columnHelper.accessor('size', {
-    header: 'サイズ',
+  columnHelper.accessor('season', {
+    header: 'シーズン',
     cell: (info) => info.getValue() ?? '—',
   }),
   columnHelper.accessor('price', {
@@ -46,6 +44,9 @@ const columns = [
     header: 'カテゴリ',
     cell: (info) => info.getValue() ?? '—',
   }),
+  columnHelper.accessor('variantCount', {
+    header: 'バリアント数',
+  }),
 ]
 
 function ItemCollection() {
@@ -53,12 +54,24 @@ function ItemCollection() {
   const { q, page } = Route.useSearch()
   const { data: items, isLoading: itemsLoading } = useItems()
   const { data: categories } = useItemCategories()
+  const { data: variants, isLoading: variantsLoading } = useItemVariants()
 
-  const categoryMap = new Map((categories ?? []).map((c) => [c.id, c.name]))
+  const categoryMap = new Map(
+    (categories ?? []).map((category) => [category.id, category.name]),
+  )
+  const variantCountByItem = new Map<string, number>()
+
+  for (const variant of variants ?? []) {
+    variantCountByItem.set(
+      variant.itemId,
+      (variantCountByItem.get(variant.itemId) ?? 0) + 1,
+    )
+  }
 
   const data = (items ?? []).map((item) => ({
     ...item,
     categoryName: categoryMap.get(item.itemCategoryId),
+    variantCount: variantCountByItem.get(item.id) ?? 0,
   }))
 
   return (
@@ -67,7 +80,7 @@ function ItemCollection() {
       <DataTable
         columns={columns}
         data={data}
-        isLoading={itemsLoading}
+        isLoading={itemsLoading || variantsLoading}
         globalFilter={q ?? ''}
         onGlobalFilterChange={(value) =>
           navigate({

@@ -17,10 +17,15 @@ import { LocationTypeBadge, StockStatusBadge } from '#/components/StatusBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Skeleton } from '#/components/ui/skeleton'
 import { useInventories } from '#/lib/api/inventories'
+import { useItemVariants } from '#/lib/api/item-variants'
 import { useItems } from '#/lib/api/items'
 import { useLocation } from '#/lib/api/locations'
 import { useTransactionsWithItems } from '#/lib/api/transactions'
 import { computeInventoryTimeline } from '#/lib/chart-utils'
+import {
+  getItemVariantDisplayName,
+  getItemVariantOptionLabel,
+} from '#/lib/item-variant-display'
 import type { Inventory } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/locations/$id')({
@@ -28,13 +33,20 @@ export const Route = createFileRoute('/_authed/locations/$id')({
   component: LocationSingle,
 })
 
-const columnHelper = createColumnHelper<Inventory & { itemName?: string }>()
+const columnHelper = createColumnHelper<
+  Inventory & { itemName?: string; sku?: string; optionLabel: string }
+>()
 
 const inventoryColumns = [
   columnHelper.accessor('itemName', {
     header: '商品',
     cell: (info) => info.getValue() ?? '—',
   }),
+  columnHelper.accessor('sku', {
+    header: 'SKU',
+    cell: (info) => info.getValue() ?? '—',
+  }),
+  columnHelper.accessor('optionLabel', { header: 'オプション' }),
   columnHelper.accessor('quantity', { header: '在庫数' }),
   columnHelper.accessor('safetyStock', { header: '安全在庫' }),
   columnHelper.display({
@@ -64,33 +76,53 @@ function LocationSingle() {
   const { id } = Route.useParams()
   const { data: location, isLoading } = useLocation(id)
   const { data: inventories } = useInventories({ locationId: id })
+  const { data: variants } = useItemVariants()
   const { data: items } = useItems()
   const { data: txsWithItems, isLoading: isTxLoading } =
     useTransactionsWithItems()
 
-  const itemMap = new Map((items ?? []).map((i) => [i.id, i.name]))
+  const itemMap = new Map((items ?? []).map((item) => [item.id, item.name]))
+  const variantMap = new Map(
+    (variants ?? []).map((variant) => [variant.id, variant]),
+  )
 
-  const inventoryData = (inventories ?? []).map((inv) => ({
-    ...inv,
-    itemName: itemMap.get(inv.itemId),
-  }))
+  const inventoryData = (inventories ?? []).map((inventory) => {
+    const variant = variantMap.get(inventory.itemVariantId)
+    return {
+      ...inventory,
+      itemName: variant ? itemMap.get(variant.itemId) : undefined,
+      sku: variant?.sku,
+      optionLabel: variant ? getItemVariantOptionLabel(variant) : '—',
+    }
+  })
+
+  const itemVariantNames = useMemo(() => {
+    const names = new Map<string, string>()
+    for (const variant of variants ?? []) {
+      names.set(
+        variant.id,
+        getItemVariantDisplayName(variant, itemMap.get(variant.itemId)),
+      )
+    }
+    return names
+  }, [itemMap, variants])
 
   const timelineData = useMemo(() => {
     if (!txsWithItems || !inventories) return []
     return computeInventoryTimeline(
       txsWithItems,
       id,
-      inventories.map((inv) => ({
-        itemId: inv.itemId,
-        quantity: inv.quantity,
+      inventories.map((inventory) => ({
+        itemVariantId: inventory.itemVariantId,
+        quantity: inventory.quantity,
       })),
-      itemMap,
+      itemVariantNames,
     )
-  }, [txsWithItems, inventories, id, itemMap])
+  }, [txsWithItems, inventories, id, itemVariantNames])
 
   const itemNames = useMemo(() => {
     if (timelineData.length === 0) return []
-    return Object.keys(timelineData[0]).filter((k) => k !== 'date')
+    return Object.keys(timelineData[0]).filter((key) => key !== 'date')
   }, [timelineData])
 
   return (
@@ -123,7 +155,7 @@ function LocationSingle() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">商品別 在庫推移</CardTitle>
+          <CardTitle className="text-base">バリアント別 在庫推移</CardTitle>
         </CardHeader>
         <CardContent>
           {isTxLoading ? (
@@ -140,12 +172,12 @@ function LocationSingle() {
                 <YAxis allowDecimals={false} fontSize={12} />
                 <Tooltip />
                 <Legend />
-                {itemNames.map((name, i) => (
+                {itemNames.map((name, index) => (
                   <Line
                     key={name}
                     type="monotone"
                     dataKey={name}
-                    stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                    stroke={CHART_COLORS[index % CHART_COLORS.length]}
                     strokeWidth={2}
                     dot={{ r: 2 }}
                   />

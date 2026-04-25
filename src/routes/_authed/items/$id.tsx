@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, useNavigate, createFileRoute } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import {
   Bar,
@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Skeleton } from '#/components/ui/skeleton'
 import { useInventories } from '#/lib/api/inventories'
 import { useItemCategories } from '#/lib/api/item-categories'
+import { useItemVariants } from '#/lib/api/item-variants'
 import { useItem } from '#/lib/api/items'
 import { useLocations } from '#/lib/api/locations'
 import { useTransactionsWithItems } from '#/lib/api/transactions'
@@ -31,23 +32,33 @@ import {
   aggregateSalesByItem,
   aggregateTransactionsByItem,
 } from '#/lib/chart-utils'
-import type { Inventory } from '#/lib/types'
+import { getItemVariantOptionLabel } from '#/lib/item-variant-display'
+import type { Inventory, ItemVariant } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/items/$id')({
   staticData: { title: '商品詳細' },
   component: ItemSingle,
 })
 
-const columnHelper = createColumnHelper<Inventory & { locationName?: string }>()
+const inventoryColumnHelper = createColumnHelper<
+  Inventory & { locationName?: string }
+>()
+const variantColumnHelper = createColumnHelper<
+  ItemVariant & {
+    optionLabel: string
+    totalQuantity: number
+    locationCount: number
+  }
+>()
 
 const inventoryColumns = [
-  columnHelper.accessor('locationName', {
+  inventoryColumnHelper.accessor('locationName', {
     header: 'ロケーション',
     cell: (info) => info.getValue() ?? '—',
   }),
-  columnHelper.accessor('quantity', { header: '在庫数' }),
-  columnHelper.accessor('safetyStock', { header: '安全在庫' }),
-  columnHelper.display({
+  inventoryColumnHelper.accessor('quantity', { header: '在庫数' }),
+  inventoryColumnHelper.accessor('safetyStock', { header: '安全在庫' }),
+  inventoryColumnHelper.display({
     id: 'status',
     header: 'ステータス',
     cell: (info) => (
@@ -59,34 +70,108 @@ const inventoryColumns = [
   }),
 ]
 
+const variantColumns = [
+  variantColumnHelper.accessor('sku', { header: 'SKU' }),
+  variantColumnHelper.accessor('optionLabel', { header: 'オプション' }),
+  variantColumnHelper.accessor('totalQuantity', { header: '総在庫数' }),
+  variantColumnHelper.accessor('locationCount', { header: '取扱拠点数' }),
+]
+
 function ItemSingle() {
+  const navigate = useNavigate()
   const { id } = Route.useParams()
   const { data: item, isLoading } = useItem(id)
   const { data: categories } = useItemCategories()
-  const { data: inventories } = useInventories({ itemId: id })
+  const { data: variants, isLoading: isVariantLoading } = useItemVariants({
+    itemId: id,
+  })
+  const { data: inventories, isLoading: isInventoryLoading } = useInventories()
   const { data: locations } = useLocations()
   const { data: txsWithItems, isLoading: isTxLoading } =
     useTransactionsWithItems()
 
   const categoryName = item?.itemCategoryId
-    ? categories?.find((c) => c.id === item.itemCategoryId)?.name
+    ? categories?.find((category) => category.id === item.itemCategoryId)?.name
     : undefined
 
-  const locationMap = new Map((locations ?? []).map((l) => [l.id, l.name]))
+  const locationMap = new Map(
+    (locations ?? []).map((location) => [location.id, location.name]),
+  )
+  const variantIds = useMemo(
+    () => new Set((variants ?? []).map((variant) => variant.id)),
+    [variants],
+  )
 
-  const inventoryData = (inventories ?? []).map((inv) => ({
-    ...inv,
-    locationName: locationMap.get(inv.locationId),
-  }))
+  const itemInventories = (inventories ?? []).filter((inventory) =>
+    variantIds.has(inventory.itemVariantId),
+  )
+
+  const inventoryByLocation = new Map<
+    string,
+    Inventory & { locationName?: string }
+  >()
+  for (const inventory of itemInventories) {
+    const existing = inventoryByLocation.get(inventory.locationId)
+    if (existing) {
+      existing.quantity += inventory.quantity
+      existing.safetyStock += inventory.safetyStock
+      continue
+    }
+
+    inventoryByLocation.set(inventory.locationId, {
+      ...inventory,
+      locationName: locationMap.get(inventory.locationId),
+    })
+  }
+
+  const inventoryData = Array.from(inventoryByLocation.values()).sort(
+    (left, right) =>
+      (left.locationName ?? left.locationId).localeCompare(
+        right.locationName ?? right.locationId,
+      ),
+  )
+
+  const variantInventoryMap = new Map<
+    string,
+    { totalQuantity: number; locationCount: number }
+  >()
+  for (const inventory of itemInventories) {
+    const existing = variantInventoryMap.get(inventory.itemVariantId)
+    if (existing) {
+      existing.totalQuantity += inventory.quantity
+      existing.locationCount += 1
+      continue
+    }
+
+    variantInventoryMap.set(inventory.itemVariantId, {
+      totalQuantity: inventory.quantity,
+      locationCount: 1,
+    })
+  }
+
+  const variantData = (variants ?? [])
+    .map((variant) => ({
+      ...variant,
+      optionLabel: getItemVariantOptionLabel(variant),
+      totalQuantity: variantInventoryMap.get(variant.id)?.totalQuantity ?? 0,
+      locationCount: variantInventoryMap.get(variant.id)?.locationCount ?? 0,
+    }))
+    .sort((left, right) => left.sku.localeCompare(right.sku))
 
   const salesData = useMemo(
-    () => (txsWithItems ? aggregateSalesByItem(txsWithItems, id) : []),
-    [txsWithItems, id],
+    () =>
+      txsWithItems && variantIds.size > 0
+        ? aggregateSalesByItem(txsWithItems, variantIds)
+        : [],
+    [txsWithItems, variantIds],
   )
 
   const txByTypeData = useMemo(
-    () => (txsWithItems ? aggregateTransactionsByItem(txsWithItems, id) : []),
-    [txsWithItems, id],
+    () =>
+      txsWithItems && variantIds.size > 0
+        ? aggregateTransactionsByItem(txsWithItems, variantIds)
+        : [],
+    [txsWithItems, variantIds],
   )
 
   return (
@@ -98,7 +183,6 @@ function ItemSingle() {
           isLoading={isLoading}
           fields={[
             { label: '名前', value: item?.name },
-            { label: 'SKU', value: item?.sku },
             { label: '説明', value: item?.description ?? '—' },
             {
               label: 'タイプ',
@@ -110,8 +194,6 @@ function ItemSingle() {
                 <ItemStatusBadge status={item.status} />
               ) : undefined,
             },
-            { label: '色', value: item?.color ?? '—' },
-            { label: 'サイズ', value: item?.size ?? '—' },
             { label: 'シーズン', value: item?.season ?? '—' },
             {
               label: '価格',
@@ -132,12 +214,29 @@ function ItemSingle() {
                   '—'
                 ),
             },
+            { label: 'バリアント数', value: variants?.length ?? 0 },
           ]}
         />
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">ロケーション別在庫</h3>
-          <DataTable columns={inventoryColumns} data={inventoryData} />
+          <DataTable
+            columns={inventoryColumns}
+            data={inventoryData}
+            isLoading={isInventoryLoading}
+          />
         </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">バリアント一覧</h3>
+        <DataTable
+          columns={variantColumns}
+          data={variantData}
+          isLoading={isVariantLoading}
+          onRowClick={(row) =>
+            navigate({ to: '/item-variants/$id', params: { id: row.id } })
+          }
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

@@ -3,9 +3,11 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
 import { DetailCard } from '#/components/DetailCard'
 import { Badge } from '#/components/ui/badge'
+import { useItemVariants } from '#/lib/api/item-variants'
 import { useItems } from '#/lib/api/items'
 import { useLocations } from '#/lib/api/locations'
 import { useSnapshot } from '#/lib/api/snapshots'
+import { getItemVariantOptionLabel } from '#/lib/item-variant-display'
 import type { SnapshotItem } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/snapshots/$id')({
@@ -14,7 +16,12 @@ export const Route = createFileRoute('/_authed/snapshots/$id')({
 })
 
 const columnHelper = createColumnHelper<
-  SnapshotItem & { itemName?: string; variance: number }
+  SnapshotItem & {
+    itemName?: string
+    sku?: string
+    optionLabel: string
+    variance: number
+  }
 >()
 
 const itemColumns = [
@@ -22,15 +29,22 @@ const itemColumns = [
     header: '商品',
     cell: (info) => info.getValue() ?? '—',
   }),
+  columnHelper.accessor('sku', {
+    header: 'SKU',
+    cell: (info) => info.getValue() ?? '—',
+  }),
+  columnHelper.accessor('optionLabel', { header: 'オプション' }),
   columnHelper.accessor('quantity', { header: '実数' }),
   columnHelper.accessor('expectedQuantity', { header: '理論値' }),
   columnHelper.accessor('variance', {
     header: '差異',
     cell: (info) => {
-      const v = info.getValue()
-      if (v === 0) return <span className="text-muted-foreground">0</span>
-      if (v > 0) return <Badge variant="outline">+{v}</Badge>
-      return <Badge variant="destructive">{v}</Badge>
+      const variance = info.getValue()
+      if (variance === 0) {
+        return <span className="text-muted-foreground">0</span>
+      }
+      if (variance > 0) return <Badge variant="outline">+{variance}</Badge>
+      return <Badge variant="destructive">{variance}</Badge>
     },
   }),
 ]
@@ -40,18 +54,27 @@ function SnapshotSingle() {
   const { data: snapshot, isLoading } = useSnapshot(id)
   const { data: locations } = useLocations()
   const { data: items } = useItems()
+  const { data: variants } = useItemVariants()
 
   const locationName = snapshot?.locationId
-    ? locations?.find((l) => l.id === snapshot.locationId)?.name
+    ? locations?.find((entry) => entry.id === snapshot.locationId)?.name
     : undefined
 
-  const itemMap = new Map((items ?? []).map((i) => [i.id, i.name]))
+  const itemMap = new Map((items ?? []).map((item) => [item.id, item.name]))
+  const variantMap = new Map(
+    (variants ?? []).map((variant) => [variant.id, variant]),
+  )
 
-  const snapshotItems = (snapshot?.items ?? []).map((si) => ({
-    ...si,
-    itemName: itemMap.get(si.itemId),
-    variance: si.quantity - si.expectedQuantity,
-  }))
+  const snapshotItems = (snapshot?.items ?? []).map((snapshotItem) => {
+    const variant = variantMap.get(snapshotItem.itemVariantId)
+    return {
+      ...snapshotItem,
+      itemName: variant ? itemMap.get(variant.itemId) : undefined,
+      sku: variant?.sku,
+      optionLabel: variant ? getItemVariantOptionLabel(variant) : '—',
+      variance: snapshotItem.quantity - snapshotItem.expectedQuantity,
+    }
+  })
 
   return (
     <div className="space-y-6">

@@ -10,15 +10,22 @@ export interface ItemCategory {
 export interface Item {
   id: string
   name: string
-  sku: string
   description: string | null
-  color: string | null
-  size: string | null
   type: 'staple' | 'seasonal' | 'limited'
   status: 'draft' | 'active' | 'on_sale' | 'discontinued'
   season: string | null
   price: number
   itemCategoryId: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ItemVariant {
+  id: string
+  itemId: string
+  sku: string
+  color: string | null
+  size: string | null
   createdAt: string
   updatedAt: string
 }
@@ -34,7 +41,7 @@ export interface Location {
 
 export interface Inventory {
   id: string
-  itemId: string
+  itemVariantId: string
   locationId: string
   quantity: number
   safetyStock: number
@@ -44,7 +51,7 @@ export interface Inventory {
 export interface TransactionItem {
   id: string
   transactionId: string
-  itemId: string
+  itemVariantId: string
   quantity: number
 }
 
@@ -64,7 +71,7 @@ export interface TransactionWithItems extends Transaction {
 export interface SnapshotItem {
   id: string
   snapshotId: string
-  itemId: string
+  itemVariantId: string
   quantity: number
   expectedQuantity: number
 }

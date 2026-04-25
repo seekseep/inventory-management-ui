@@ -15,10 +15,12 @@ import { StockStatusBadge } from '#/components/StatusBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Skeleton } from '#/components/ui/skeleton'
 import { useInventory } from '#/lib/api/inventories'
+import { useItemVariants } from '#/lib/api/item-variants'
 import { useItems } from '#/lib/api/items'
 import { useLocations } from '#/lib/api/locations'
 import { useTransactionsWithItems } from '#/lib/api/transactions'
 import { computeStockTimeline } from '#/lib/chart-utils'
+import { getItemVariantOptionLabel } from '#/lib/item-variant-display'
 
 export const Route = createFileRoute('/_authed/inventories/$id')({
   staticData: { title: '在庫詳細' },
@@ -28,19 +30,25 @@ export const Route = createFileRoute('/_authed/inventories/$id')({
 function InventorySingle() {
   const { id } = Route.useParams()
   const { data: inventory, isLoading } = useInventory(id)
+  const { data: variants } = useItemVariants()
   const { data: items } = useItems()
   const { data: locations } = useLocations()
   const { data: txsWithItems, isLoading: isTxLoading } =
     useTransactionsWithItems()
 
-  const item = items?.find((i) => i.id === inventory?.itemId)
-  const location = locations?.find((l) => l.id === inventory?.locationId)
+  const variant = variants?.find(
+    (entry) => entry.id === inventory?.itemVariantId,
+  )
+  const item = items?.find((entry) => entry.id === variant?.itemId)
+  const location = locations?.find(
+    (entry) => entry.id === inventory?.locationId,
+  )
 
   const stockTimeline = useMemo(() => {
     if (!txsWithItems || !inventory) return []
     return computeStockTimeline(
       txsWithItems,
-      inventory.itemId,
+      inventory.itemVariantId,
       inventory.locationId,
       inventory.quantity,
     )
@@ -57,10 +65,10 @@ function InventorySingle() {
             {
               label: '商品',
               value:
-                item && inventory ? (
+                item && variant ? (
                   <Link
                     to="/items/$id"
-                    params={{ id: inventory.itemId }}
+                    params={{ id: variant.itemId }}
                     className="hover:underline"
                   >
                     {item.name}
@@ -68,6 +76,24 @@ function InventorySingle() {
                 ) : (
                   '—'
                 ),
+            },
+            {
+              label: 'バリアント',
+              value: variant ? (
+                <Link
+                  to="/item-variants/$id"
+                  params={{ id: variant.id }}
+                  className="hover:underline"
+                >
+                  {variant.sku}
+                </Link>
+              ) : (
+                '—'
+              ),
+            },
+            {
+              label: 'オプション',
+              value: variant ? getItemVariantOptionLabel(variant) : '—',
             },
             {
               label: 'ロケーション',
@@ -103,14 +129,17 @@ function InventorySingle() {
             },
           ]}
         />
-        {item && (
+        {variant && item && (
           <DetailCard
-            title="商品情報"
+            title="バリアント情報"
             fields={[
-              { label: '名前', value: item.name },
-              { label: 'SKU', value: item.sku },
-              { label: '色', value: item.color ?? '—' },
-              { label: 'サイズ', value: item.size ?? '—' },
+              { label: 'SKU', value: variant.sku },
+              { label: '色', value: variant.color ?? '—' },
+              { label: 'サイズ', value: variant.size ?? '—' },
+              {
+                label: 'オプション',
+                value: getItemVariantOptionLabel(variant),
+              },
               {
                 label: '価格',
                 value: `¥${item.price.toLocaleString()}`,

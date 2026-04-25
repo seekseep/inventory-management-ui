@@ -5,11 +5,11 @@ import type { Inventory } from '#/lib/types'
 
 export function getInventories(params?: {
   locationId?: string
-  itemId?: string
+  itemVariantId?: string
 }) {
   const queryParams: Record<string, string> = {}
   if (params?.locationId) queryParams.locationId = params.locationId
-  if (params?.itemId) queryParams.itemId = params.itemId
+  if (params?.itemVariantId) queryParams.itemVariantId = params.itemVariantId
   return apiGet<Inventory[]>('/api/inventories', queryParams)
 }
 
@@ -19,14 +19,14 @@ export function getInventory(id: string) {
 
 export const inventoryKeys = {
   all: ['inventories'] as const,
-  list: (params?: { locationId?: string; itemId?: string }) =>
+  list: (params?: { locationId?: string; itemVariantId?: string }) =>
     [...inventoryKeys.all, 'list', params ?? {}] as const,
   detail: (id: string) => [...inventoryKeys.all, 'detail', id] as const,
 }
 
 export function useInventories(params?: {
   locationId?: string
-  itemId?: string
+  itemVariantId?: string
 }) {
   return useQuery({
     queryKey: inventoryKeys.list(params),

@@ -7,7 +7,14 @@ export interface DailyQuantity {
 
 export interface DailyQuantityByItem {
   date: string
-  [itemId: string]: number | string
+  [itemVariantName: string]: number | string
+}
+
+function hasTargetVariant(
+  itemVariantIds: ReadonlySet<string>,
+  itemVariantId: string,
+) {
+  return itemVariantIds.has(itemVariantId)
 }
 
 /**
@@ -15,14 +22,15 @@ export interface DailyQuantityByItem {
  */
 export function aggregateSalesByItem(
   transactions: TransactionWithItems[],
-  itemId: string,
+  itemVariantIds: ReadonlySet<string>,
 ): DailyQuantity[] {
   const salesByDate = new Map<string, number>()
 
   for (const tx of transactions) {
     if (tx.type !== 'sale') continue
+
     for (const item of tx.items) {
-      if (item.itemId !== itemId) continue
+      if (!hasTargetVariant(itemVariantIds, item.itemVariantId)) continue
       const date = tx.createdAt.slice(0, 10)
       salesByDate.set(date, (salesByDate.get(date) ?? 0) + item.quantity)
     }
@@ -30,7 +38,7 @@ export function aggregateSalesByItem(
 
   return Array.from(salesByDate.entries())
     .map(([date, quantity]) => ({ date, quantity }))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .sort((left, right) => left.date.localeCompare(right.date))
 }
 
 /**
@@ -38,7 +46,7 @@ export function aggregateSalesByItem(
  */
 export function aggregateTransactionsByItem(
   transactions: TransactionWithItems[],
-  itemId: string,
+  itemVariantIds: ReadonlySet<string>,
 ): {
   date: string
   purchase: number
@@ -60,7 +68,8 @@ export function aggregateTransactionsByItem(
 
   for (const tx of transactions) {
     for (const item of tx.items) {
-      if (item.itemId !== itemId) continue
+      if (!hasTargetVariant(itemVariantIds, item.itemVariantId)) continue
+
       const date = tx.createdAt.slice(0, 10)
       const entry = byDate.get(date) ?? {
         purchase: 0,
@@ -69,6 +78,7 @@ export function aggregateTransactionsByItem(
         transfer_out: 0,
         disposal: 0,
       }
+
       switch (tx.type) {
         case 'purchase':
           entry.purchase += item.quantity
@@ -77,19 +87,21 @@ export function aggregateTransactionsByItem(
           entry.sale += item.quantity
           break
         case 'transfer':
-          entry.transfer_in += item.quantity
+          if (tx.toLocationId) entry.transfer_in += item.quantity
+          if (tx.fromLocationId) entry.transfer_out += item.quantity
           break
         case 'disposal':
           entry.disposal += item.quantity
           break
       }
+
       byDate.set(date, entry)
     }
   }
 
   return Array.from(byDate.entries())
-    .map(([date, vals]) => ({ date, ...vals }))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(([date, values]) => ({ date, ...values }))
+    .sort((left, right) => left.date.localeCompare(right.date))
 }
 
 /**
@@ -99,91 +111,87 @@ export function aggregateTransactionsByItem(
 export function computeInventoryTimeline(
   transactions: TransactionWithItems[],
   locationId: string,
-  currentInventories: { itemId: string; quantity: number }[],
-  itemNames: Map<string, string>,
-): { date: string; [itemName: string]: number | string }[] {
-  // 対象ロケーションに関連するトランザクションを時系列でソート
-  const relevantTxs = transactions
+  currentInventories: { itemVariantId: string; quantity: number }[],
+  itemVariantNames: Map<string, string>,
+): { date: string; [itemVariantName: string]: number | string }[] {
+  const relevantTransactions = transactions
     .filter(
       (tx) =>
         tx.fromLocationId === locationId || tx.toLocationId === locationId,
     )
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
 
-  // 現在の在庫をベースに、対象商品を特定
-  const currentQty = new Map<string, number>()
-  for (const inv of currentInventories) {
-    currentQty.set(inv.itemId, inv.quantity)
+  const currentQuantities = new Map<string, number>()
+  for (const inventory of currentInventories) {
+    currentQuantities.set(inventory.itemVariantId, inventory.quantity)
   }
 
-  // 各トランザクションの日付ごとの在庫変動を計算
   const deltaByDate = new Map<string, Map<string, number>>()
-  for (const tx of relevantTxs) {
+  for (const tx of relevantTransactions) {
     const date = tx.createdAt.slice(0, 10)
     if (!deltaByDate.has(date)) deltaByDate.set(date, new Map())
-    const dayDelta = deltaByDate.get(date)!
+    const dailyDelta = deltaByDate.get(date)!
 
     for (const item of tx.items) {
       let delta = 0
-      if (tx.toLocationId === locationId) {
-        // 入庫: purchase, transfer(to)
-        delta = item.quantity
-      }
-      if (tx.fromLocationId === locationId) {
-        // 出庫: sale, transfer(from), disposal
-        delta = -item.quantity
-      }
-      dayDelta.set(item.itemId, (dayDelta.get(item.itemId) ?? 0) + delta)
+      if (tx.toLocationId === locationId) delta += item.quantity
+      if (tx.fromLocationId === locationId) delta -= item.quantity
+      dailyDelta.set(
+        item.itemVariantId,
+        (dailyDelta.get(item.itemVariantId) ?? 0) + delta,
+      )
     }
   }
 
-  // 日付リストをソート
   const dates = Array.from(deltaByDate.keys()).sort()
   if (dates.length === 0) return []
 
-  // 現在在庫から逆算して各日の在庫を復元
-  const allItemIds = new Set<string>()
-  for (const inv of currentInventories) allItemIds.add(inv.itemId)
-  for (const [, dayDelta] of deltaByDate) {
-    for (const itemId of dayDelta.keys()) allItemIds.add(itemId)
+  const allVariantIds = new Set<string>()
+  for (const inventory of currentInventories) {
+    allVariantIds.add(inventory.itemVariantId)
   }
-
-  // 各日の累積変動を計算
-  const cumulativeDeltas = new Map<string, number>()
-  for (const itemId of allItemIds) cumulativeDeltas.set(itemId, 0)
-
-  // 全トランザクションの合計変動
-  const totalDeltas = new Map<string, number>()
-  for (const itemId of allItemIds) totalDeltas.set(itemId, 0)
-  for (const [, dayDelta] of deltaByDate) {
-    for (const [itemId, delta] of dayDelta) {
-      totalDeltas.set(itemId, (totalDeltas.get(itemId) ?? 0) + delta)
+  for (const [, dailyDelta] of deltaByDate) {
+    for (const itemVariantId of dailyDelta.keys()) {
+      allVariantIds.add(itemVariantId)
     }
   }
 
-  // 最初の日の在庫 = 現在在庫 - 全変動合計
-  const startQty = new Map<string, number>()
-  for (const itemId of allItemIds) {
-    startQty.set(
-      itemId,
-      (currentQty.get(itemId) ?? 0) - (totalDeltas.get(itemId) ?? 0),
+  const totalDeltas = new Map<string, number>()
+  for (const itemVariantId of allVariantIds) totalDeltas.set(itemVariantId, 0)
+  for (const [, dailyDelta] of deltaByDate) {
+    for (const [itemVariantId, delta] of dailyDelta) {
+      totalDeltas.set(
+        itemVariantId,
+        (totalDeltas.get(itemVariantId) ?? 0) + delta,
+      )
+    }
+  }
+
+  const startingQuantities = new Map<string, number>()
+  for (const itemVariantId of allVariantIds) {
+    startingQuantities.set(
+      itemVariantId,
+      (currentQuantities.get(itemVariantId) ?? 0) -
+        (totalDeltas.get(itemVariantId) ?? 0),
     )
   }
 
-  // 日別の在庫推移データを構築
   const result: { date: string; [key: string]: number | string }[] = []
-  const runningQty = new Map<string, number>(startQty)
+  const runningQuantities = new Map<string, number>(startingQuantities)
 
   for (const date of dates) {
-    const dayDelta = deltaByDate.get(date)!
-    for (const [itemId, delta] of dayDelta) {
-      runningQty.set(itemId, (runningQty.get(itemId) ?? 0) + delta)
+    const dailyDelta = deltaByDate.get(date)!
+    for (const [itemVariantId, delta] of dailyDelta) {
+      runningQuantities.set(
+        itemVariantId,
+        (runningQuantities.get(itemVariantId) ?? 0) + delta,
+      )
     }
 
     const point: { date: string; [key: string]: number | string } = { date }
-    for (const itemId of allItemIds) {
-      const name = itemNames.get(itemId) ?? itemId
-      point[name] = runningQty.get(itemId) ?? 0
+    for (const itemVariantId of allVariantIds) {
+      const label = itemVariantNames.get(itemVariantId) ?? itemVariantId
+      point[label] = runningQuantities.get(itemVariantId) ?? 0
     }
     result.push(point)
   }
@@ -192,30 +200,32 @@ export function computeInventoryTimeline(
 }
 
 /**
- * 特定の商品×ロケーションの在庫推移を計算する
+ * 特定のバリアント×ロケーションの在庫推移を計算する
  */
 export function computeStockTimeline(
   transactions: TransactionWithItems[],
-  itemId: string,
+  itemVariantId: string,
   locationId: string,
   currentQuantity: number,
 ): DailyQuantity[] {
-  const relevantTxs = transactions
+  const relevantTransactions = transactions
     .filter(
       (tx) =>
         tx.fromLocationId === locationId || tx.toLocationId === locationId,
     )
-    .filter((tx) => tx.items.some((item) => item.itemId === itemId))
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .filter((tx) =>
+      tx.items.some((item) => item.itemVariantId === itemVariantId),
+    )
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
 
   const deltaByDate = new Map<string, number>()
-  for (const tx of relevantTxs) {
+  for (const tx of relevantTransactions) {
     const date = tx.createdAt.slice(0, 10)
     for (const item of tx.items) {
-      if (item.itemId !== itemId) continue
+      if (item.itemVariantId !== itemVariantId) continue
       let delta = 0
-      if (tx.toLocationId === locationId) delta = item.quantity
-      if (tx.fromLocationId === locationId) delta = -item.quantity
+      if (tx.toLocationId === locationId) delta += item.quantity
+      if (tx.fromLocationId === locationId) delta -= item.quantity
       deltaByDate.set(date, (deltaByDate.get(date) ?? 0) + delta)
     }
   }
@@ -224,15 +234,15 @@ export function computeStockTimeline(
   if (dates.length === 0) return []
 
   const totalDelta = Array.from(deltaByDate.values()).reduce(
-    (sum, d) => sum + d,
+    (sum, delta) => sum + delta,
     0,
   )
-  let running = currentQuantity - totalDelta
+  let runningQuantity = currentQuantity - totalDelta
 
   const result: DailyQuantity[] = []
   for (const date of dates) {
-    running += deltaByDate.get(date) ?? 0
-    result.push({ date, quantity: running })
+    runningQuantity += deltaByDate.get(date) ?? 0
+    result.push({ date, quantity: runningQuantity })
   }
 
   return result
@@ -268,6 +278,6 @@ export function aggregateTransactionCounts(
   }
 
   return Array.from(byDate.entries())
-    .map(([date, vals]) => ({ date, ...vals }))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(([date, values]) => ({ date, ...values }))
+    .sort((left, right) => left.date.localeCompare(right.date))
 }

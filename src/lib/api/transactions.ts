@@ -45,8 +45,7 @@ export function useTransactionsWithItems() {
     })),
   })
 
-  const isLoading =
-    isListLoading || detailQueries.some((q) => q.isLoading)
+  const isLoading = isListLoading || detailQueries.some((q) => q.isLoading)
   const data = isLoading
     ? undefined
     : detailQueries

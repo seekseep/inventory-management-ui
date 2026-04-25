@@ -15,12 +15,14 @@ import { Route as AuthedTransactionsIndexRouteImport } from './routes/_authed/tr
 import { Route as AuthedSnapshotsIndexRouteImport } from './routes/_authed/snapshots/index'
 import { Route as AuthedLocationsIndexRouteImport } from './routes/_authed/locations/index'
 import { Route as AuthedItemsIndexRouteImport } from './routes/_authed/items/index'
+import { Route as AuthedItemVariantsIndexRouteImport } from './routes/_authed/item-variants/index'
 import { Route as AuthedItemCategoriesIndexRouteImport } from './routes/_authed/item-categories/index'
 import { Route as AuthedInventoriesIndexRouteImport } from './routes/_authed/inventories/index'
 import { Route as AuthedTransactionsIdRouteImport } from './routes/_authed/transactions/$id'
 import { Route as AuthedSnapshotsIdRouteImport } from './routes/_authed/snapshots/$id'
 import { Route as AuthedLocationsIdRouteImport } from './routes/_authed/locations/$id'
 import { Route as AuthedItemsIdRouteImport } from './routes/_authed/items/$id'
+import { Route as AuthedItemVariantsIdRouteImport } from './routes/_authed/item-variants/$id'
 import { Route as AuthedItemCategoriesIdRouteImport } from './routes/_authed/item-categories/$id'
 import { Route as AuthedInventoriesIdRouteImport } from './routes/_authed/inventories/$id'
 
@@ -51,6 +53,11 @@ const AuthedLocationsIndexRoute = AuthedLocationsIndexRouteImport.update({
 const AuthedItemsIndexRoute = AuthedItemsIndexRouteImport.update({
   id: '/items/',
   path: '/items/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedItemVariantsIndexRoute = AuthedItemVariantsIndexRouteImport.update({
+  id: '/item-variants/',
+  path: '/item-variants/',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedItemCategoriesIndexRoute =
@@ -84,6 +91,11 @@ const AuthedItemsIdRoute = AuthedItemsIdRouteImport.update({
   path: '/items/$id',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedItemVariantsIdRoute = AuthedItemVariantsIdRouteImport.update({
+  id: '/item-variants/$id',
+  path: '/item-variants/$id',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedItemCategoriesIdRoute = AuthedItemCategoriesIdRouteImport.update({
   id: '/item-categories/$id',
   path: '/item-categories/$id',
@@ -99,12 +111,14 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/inventories/$id': typeof AuthedInventoriesIdRoute
   '/item-categories/$id': typeof AuthedItemCategoriesIdRoute
+  '/item-variants/$id': typeof AuthedItemVariantsIdRoute
   '/items/$id': typeof AuthedItemsIdRoute
   '/locations/$id': typeof AuthedLocationsIdRoute
   '/snapshots/$id': typeof AuthedSnapshotsIdRoute
   '/transactions/$id': typeof AuthedTransactionsIdRoute
   '/inventories/': typeof AuthedInventoriesIndexRoute
   '/item-categories/': typeof AuthedItemCategoriesIndexRoute
+  '/item-variants/': typeof AuthedItemVariantsIndexRoute
   '/items/': typeof AuthedItemsIndexRoute
   '/locations/': typeof AuthedLocationsIndexRoute
   '/snapshots/': typeof AuthedSnapshotsIndexRoute
@@ -114,12 +128,14 @@ export interface FileRoutesByTo {
   '/': typeof AuthedIndexRoute
   '/inventories/$id': typeof AuthedInventoriesIdRoute
   '/item-categories/$id': typeof AuthedItemCategoriesIdRoute
+  '/item-variants/$id': typeof AuthedItemVariantsIdRoute
   '/items/$id': typeof AuthedItemsIdRoute
   '/locations/$id': typeof AuthedLocationsIdRoute
   '/snapshots/$id': typeof AuthedSnapshotsIdRoute
   '/transactions/$id': typeof AuthedTransactionsIdRoute
   '/inventories': typeof AuthedInventoriesIndexRoute
   '/item-categories': typeof AuthedItemCategoriesIndexRoute
+  '/item-variants': typeof AuthedItemVariantsIndexRoute
   '/items': typeof AuthedItemsIndexRoute
   '/locations': typeof AuthedLocationsIndexRoute
   '/snapshots': typeof AuthedSnapshotsIndexRoute
@@ -131,12 +147,14 @@ export interface FileRoutesById {
   '/_authed/': typeof AuthedIndexRoute
   '/_authed/inventories/$id': typeof AuthedInventoriesIdRoute
   '/_authed/item-categories/$id': typeof AuthedItemCategoriesIdRoute
+  '/_authed/item-variants/$id': typeof AuthedItemVariantsIdRoute
   '/_authed/items/$id': typeof AuthedItemsIdRoute
   '/_authed/locations/$id': typeof AuthedLocationsIdRoute
   '/_authed/snapshots/$id': typeof AuthedSnapshotsIdRoute
   '/_authed/transactions/$id': typeof AuthedTransactionsIdRoute
   '/_authed/inventories/': typeof AuthedInventoriesIndexRoute
   '/_authed/item-categories/': typeof AuthedItemCategoriesIndexRoute
+  '/_authed/item-variants/': typeof AuthedItemVariantsIndexRoute
   '/_authed/items/': typeof AuthedItemsIndexRoute
   '/_authed/locations/': typeof AuthedLocationsIndexRoute
   '/_authed/snapshots/': typeof AuthedSnapshotsIndexRoute
@@ -148,12 +166,14 @@ export interface FileRouteTypes {
     | '/'
     | '/inventories/$id'
     | '/item-categories/$id'
+    | '/item-variants/$id'
     | '/items/$id'
     | '/locations/$id'
     | '/snapshots/$id'
     | '/transactions/$id'
     | '/inventories/'
     | '/item-categories/'
+    | '/item-variants/'
     | '/items/'
     | '/locations/'
     | '/snapshots/'
@@ -163,12 +183,14 @@ export interface FileRouteTypes {
     | '/'
     | '/inventories/$id'
     | '/item-categories/$id'
+    | '/item-variants/$id'
     | '/items/$id'
     | '/locations/$id'
     | '/snapshots/$id'
     | '/transactions/$id'
     | '/inventories'
     | '/item-categories'
+    | '/item-variants'
     | '/items'
     | '/locations'
     | '/snapshots'
@@ -179,12 +201,14 @@ export interface FileRouteTypes {
     | '/_authed/'
     | '/_authed/inventories/$id'
     | '/_authed/item-categories/$id'
+    | '/_authed/item-variants/$id'
     | '/_authed/items/$id'
     | '/_authed/locations/$id'
     | '/_authed/snapshots/$id'
     | '/_authed/transactions/$id'
     | '/_authed/inventories/'
     | '/_authed/item-categories/'
+    | '/_authed/item-variants/'
     | '/_authed/items/'
     | '/_authed/locations/'
     | '/_authed/snapshots/'
@@ -239,6 +263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedItemsIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/item-variants/': {
+      id: '/_authed/item-variants/'
+      path: '/item-variants'
+      fullPath: '/item-variants/'
+      preLoaderRoute: typeof AuthedItemVariantsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/item-categories/': {
       id: '/_authed/item-categories/'
       path: '/item-categories'
@@ -281,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedItemsIdRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/item-variants/$id': {
+      id: '/_authed/item-variants/$id'
+      path: '/item-variants/$id'
+      fullPath: '/item-variants/$id'
+      preLoaderRoute: typeof AuthedItemVariantsIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/item-categories/$id': {
       id: '/_authed/item-categories/$id'
       path: '/item-categories/$id'
@@ -302,12 +340,14 @@ interface AuthedRouteChildren {
   AuthedIndexRoute: typeof AuthedIndexRoute
   AuthedInventoriesIdRoute: typeof AuthedInventoriesIdRoute
   AuthedItemCategoriesIdRoute: typeof AuthedItemCategoriesIdRoute
+  AuthedItemVariantsIdRoute: typeof AuthedItemVariantsIdRoute
   AuthedItemsIdRoute: typeof AuthedItemsIdRoute
   AuthedLocationsIdRoute: typeof AuthedLocationsIdRoute
   AuthedSnapshotsIdRoute: typeof AuthedSnapshotsIdRoute
   AuthedTransactionsIdRoute: typeof AuthedTransactionsIdRoute
   AuthedInventoriesIndexRoute: typeof AuthedInventoriesIndexRoute
   AuthedItemCategoriesIndexRoute: typeof AuthedItemCategoriesIndexRoute
+  AuthedItemVariantsIndexRoute: typeof AuthedItemVariantsIndexRoute
   AuthedItemsIndexRoute: typeof AuthedItemsIndexRoute
   AuthedLocationsIndexRoute: typeof AuthedLocationsIndexRoute
   AuthedSnapshotsIndexRoute: typeof AuthedSnapshotsIndexRoute
@@ -318,12 +358,14 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedIndexRoute: AuthedIndexRoute,
   AuthedInventoriesIdRoute: AuthedInventoriesIdRoute,
   AuthedItemCategoriesIdRoute: AuthedItemCategoriesIdRoute,
+  AuthedItemVariantsIdRoute: AuthedItemVariantsIdRoute,
   AuthedItemsIdRoute: AuthedItemsIdRoute,
   AuthedLocationsIdRoute: AuthedLocationsIdRoute,
   AuthedSnapshotsIdRoute: AuthedSnapshotsIdRoute,
   AuthedTransactionsIdRoute: AuthedTransactionsIdRoute,
   AuthedInventoriesIndexRoute: AuthedInventoriesIndexRoute,
   AuthedItemCategoriesIndexRoute: AuthedItemCategoriesIndexRoute,
+  AuthedItemVariantsIndexRoute: AuthedItemVariantsIndexRoute,
   AuthedItemsIndexRoute: AuthedItemsIndexRoute,
   AuthedLocationsIndexRoute: AuthedLocationsIndexRoute,
   AuthedSnapshotsIndexRoute: AuthedSnapshotsIndexRoute,

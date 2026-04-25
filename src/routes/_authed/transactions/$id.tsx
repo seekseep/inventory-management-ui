@@ -3,9 +3,11 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
 import { DetailCard } from '#/components/DetailCard'
 import { TransactionTypeBadge } from '#/components/StatusBadge'
+import { useItemVariants } from '#/lib/api/item-variants'
 import { useItems } from '#/lib/api/items'
 import { useLocations } from '#/lib/api/locations'
 import { useTransaction } from '#/lib/api/transactions'
+import { getItemVariantOptionLabel } from '#/lib/item-variant-display'
 import type { TransactionItem } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/transactions/$id')({
@@ -14,7 +16,11 @@ export const Route = createFileRoute('/_authed/transactions/$id')({
 })
 
 const columnHelper = createColumnHelper<
-  TransactionItem & { itemName?: string }
+  TransactionItem & {
+    itemName?: string
+    sku?: string
+    optionLabel: string
+  }
 >()
 
 const itemColumns = [
@@ -22,6 +28,11 @@ const itemColumns = [
     header: '商品',
     cell: (info) => info.getValue() ?? '—',
   }),
+  columnHelper.accessor('sku', {
+    header: 'SKU',
+    cell: (info) => info.getValue() ?? '—',
+  }),
+  columnHelper.accessor('optionLabel', { header: 'オプション' }),
   columnHelper.accessor('quantity', { header: '数量' }),
 ]
 
@@ -30,14 +41,25 @@ function TransactionSingle() {
   const { data: transaction, isLoading } = useTransaction(id)
   const { data: locations } = useLocations()
   const { data: items } = useItems()
+  const { data: variants } = useItemVariants()
 
-  const locationMap = new Map((locations ?? []).map((l) => [l.id, l.name]))
-  const itemMap = new Map((items ?? []).map((i) => [i.id, i.name]))
+  const locationMap = new Map(
+    (locations ?? []).map((location) => [location.id, location.name]),
+  )
+  const itemMap = new Map((items ?? []).map((item) => [item.id, item.name]))
+  const variantMap = new Map(
+    (variants ?? []).map((variant) => [variant.id, variant]),
+  )
 
-  const transactionItems = (transaction?.items ?? []).map((ti) => ({
-    ...ti,
-    itemName: itemMap.get(ti.itemId),
-  }))
+  const transactionItems = (transaction?.items ?? []).map((transactionItem) => {
+    const variant = variantMap.get(transactionItem.itemVariantId)
+    return {
+      ...transactionItem,
+      itemName: variant ? itemMap.get(variant.itemId) : undefined,
+      sku: variant?.sku,
+      optionLabel: variant ? getItemVariantOptionLabel(variant) : '—',
+    }
+  })
 
   const fromName = transaction?.fromLocationId
     ? locationMap.get(transaction.fromLocationId)

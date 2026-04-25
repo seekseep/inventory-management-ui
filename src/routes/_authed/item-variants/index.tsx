@@ -1,19 +1,17 @@
 import { useNavigate, createFileRoute } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '#/components/DataTable'
-import { StockStatusBadge } from '#/components/StatusBadge'
 import { useInventories } from '#/lib/api/inventories'
 import { useItemVariants } from '#/lib/api/item-variants'
 import { useItems } from '#/lib/api/items'
-import { useLocations } from '#/lib/api/locations'
 import { getItemVariantOptionLabel } from '#/lib/item-variant-display'
-import type { Inventory } from '#/lib/types'
+import type { ItemVariant } from '#/lib/types'
 
 type SearchParams = { q?: string; page?: number }
 
-export const Route = createFileRoute('/_authed/inventories/')({
-  staticData: { title: '在庫' },
-  component: InventoryCollection,
+export const Route = createFileRoute('/_authed/item-variants/')({
+  staticData: { title: 'バリアント' },
+  component: ItemVariantCollection,
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
     q: (search.q as string) || undefined,
     page: Number(search.page) || undefined,
@@ -21,11 +19,11 @@ export const Route = createFileRoute('/_authed/inventories/')({
 })
 
 const columnHelper = createColumnHelper<
-  Inventory & {
+  ItemVariant & {
     itemName?: string
-    sku?: string
     optionLabel: string
-    locationName?: string
+    totalQuantity: number
+    locationCount: number
   }
 >()
 
@@ -34,63 +32,56 @@ const columns = [
     header: '商品',
     cell: (info) => info.getValue() ?? '—',
   }),
-  columnHelper.accessor('sku', {
-    header: 'SKU',
-    cell: (info) => info.getValue() ?? '—',
-  }),
+  columnHelper.accessor('sku', { header: 'SKU' }),
   columnHelper.accessor('optionLabel', { header: 'オプション' }),
-  columnHelper.accessor('locationName', {
-    header: 'ロケーション',
-    cell: (info) => info.getValue() ?? '—',
-  }),
-  columnHelper.accessor('quantity', { header: '在庫数' }),
-  columnHelper.accessor('safetyStock', { header: '安全在庫' }),
-  columnHelper.display({
-    id: 'status',
-    header: 'ステータス',
-    cell: (info) => (
-      <StockStatusBadge
-        quantity={info.row.original.quantity}
-        safetyStock={info.row.original.safetyStock}
-      />
-    ),
-  }),
+  columnHelper.accessor('totalQuantity', { header: '総在庫数' }),
+  columnHelper.accessor('locationCount', { header: '取扱拠点数' }),
 ]
 
-function InventoryCollection() {
+function ItemVariantCollection() {
   const navigate = useNavigate()
   const { q, page } = Route.useSearch()
-  const { data: inventories, isLoading } = useInventories()
   const { data: variants, isLoading: isVariantLoading } = useItemVariants()
   const { data: items } = useItems()
-  const { data: locations } = useLocations()
+  const { data: inventories, isLoading: isInventoryLoading } = useInventories()
 
   const itemMap = new Map((items ?? []).map((item) => [item.id, item.name]))
-  const variantMap = new Map(
-    (variants ?? []).map((variant) => [variant.id, variant]),
-  )
-  const locationMap = new Map(
-    (locations ?? []).map((location) => [location.id, location.name]),
-  )
+  const inventoryMap = new Map<
+    string,
+    { totalQuantity: number; locationCount: number }
+  >()
 
-  const data = (inventories ?? []).map((inventory) => {
-    const variant = variantMap.get(inventory.itemVariantId)
-    return {
-      ...inventory,
-      itemName: variant ? itemMap.get(variant.itemId) : undefined,
-      sku: variant?.sku,
-      optionLabel: variant ? getItemVariantOptionLabel(variant) : '—',
-      locationName: locationMap.get(inventory.locationId),
+  for (const inventory of inventories ?? []) {
+    const existing = inventoryMap.get(inventory.itemVariantId)
+    if (existing) {
+      existing.totalQuantity += inventory.quantity
+      existing.locationCount += 1
+      continue
     }
-  })
+
+    inventoryMap.set(inventory.itemVariantId, {
+      totalQuantity: inventory.quantity,
+      locationCount: 1,
+    })
+  }
+
+  const data = (variants ?? [])
+    .map((variant) => ({
+      ...variant,
+      itemName: itemMap.get(variant.itemId),
+      optionLabel: getItemVariantOptionLabel(variant),
+      totalQuantity: inventoryMap.get(variant.id)?.totalQuantity ?? 0,
+      locationCount: inventoryMap.get(variant.id)?.locationCount ?? 0,
+    }))
+    .sort((left, right) => left.sku.localeCompare(right.sku))
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">在庫一覧</h2>
+      <h2 className="text-2xl font-bold">バリアント一覧</h2>
       <DataTable
         columns={columns}
         data={data}
-        isLoading={isLoading || isVariantLoading}
+        isLoading={isVariantLoading || isInventoryLoading}
         globalFilter={q ?? ''}
         onGlobalFilterChange={(value) =>
           navigate({
@@ -113,7 +104,7 @@ function InventoryCollection() {
           })
         }
         onRowClick={(row) =>
-          navigate({ to: '/inventories/$id', params: { id: row.id } })
+          navigate({ to: '/item-variants/$id', params: { id: row.id } })
         }
       />
     </div>

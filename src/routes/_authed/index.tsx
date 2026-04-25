@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { ArrowRightLeft, AlertTriangle, MapPin, Package } from 'lucide-react'
+import { AlertTriangle, ArrowRightLeft, MapPin, Package } from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -13,6 +13,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import {
+  TransactionTypeBadge,
+  StockStatusBadge,
+} from '#/components/StatusBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Skeleton } from '#/components/ui/skeleton'
 import {
@@ -23,11 +27,8 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table'
-import {
-  TransactionTypeBadge,
-  StockStatusBadge,
-} from '#/components/StatusBadge'
 import { useInventories } from '#/lib/api/inventories'
+import { useItemVariants } from '#/lib/api/item-variants'
 import { useItems } from '#/lib/api/items'
 import { useLocations } from '#/lib/api/locations'
 import {
@@ -35,6 +36,7 @@ import {
   useTransactionsWithItems,
 } from '#/lib/api/transactions'
 import { aggregateTransactionCounts } from '#/lib/chart-utils'
+import { getItemVariantDisplayName } from '#/lib/item-variant-display'
 import type { TransactionWithItems } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/')({
@@ -71,26 +73,30 @@ function StatCard({
 }
 
 function computeSalesRevenue(
-  txs: TransactionWithItems[],
+  transactions: TransactionWithItems[],
   priceMap: Map<string, number>,
 ) {
   const byDate = new Map<string, number>()
-  for (const tx of txs) {
+
+  for (const tx of transactions) {
     if (tx.type !== 'sale') continue
+
     const date = tx.createdAt.slice(0, 10)
     let revenue = 0
     for (const item of tx.items) {
-      revenue += item.quantity * (priceMap.get(item.itemId) ?? 0)
+      revenue += item.quantity * (priceMap.get(item.itemVariantId) ?? 0)
     }
     byDate.set(date, (byDate.get(date) ?? 0) + revenue)
   }
+
   return Array.from(byDate.entries())
     .map(([date, revenue]) => ({ date, revenue }))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .sort((left, right) => left.date.localeCompare(right.date))
 }
 
 function Dashboard() {
   const items = useItems()
+  const itemVariants = useItemVariants()
   const locations = useLocations()
   const inventories = useInventories()
   const transactions = useTransactions()
@@ -99,21 +105,38 @@ function Dashboard() {
 
   const isLoading =
     items.isLoading ||
+    itemVariants.isLoading ||
     locations.isLoading ||
     inventories.isLoading ||
     transactions.isLoading
 
+  const locationMap = new Map(
+    (locations.data ?? []).map((location) => [location.id, location.name]),
+  )
+  const itemMap = new Map((items.data ?? []).map((item) => [item.id, item]))
+  const variantMap = new Map(
+    (itemVariants.data ?? []).map((variant) => [variant.id, variant]),
+  )
+  const priceMap = new Map(
+    (itemVariants.data ?? []).map((variant) => [
+      variant.id,
+      itemMap.get(variant.itemId)?.price ?? 0,
+    ]),
+  )
+  const variantNameMap = new Map(
+    (itemVariants.data ?? []).map((variant) => [
+      variant.id,
+      getItemVariantDisplayName(variant, itemMap.get(variant.itemId)?.name),
+    ]),
+  )
+
   const lowStockItems = (inventories.data ?? []).filter(
-    (inv) => inv.quantity <= inv.safetyStock,
+    (inventory) => inventory.quantity <= inventory.safetyStock,
   )
 
   const recentTransactions = (transactions.data ?? [])
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
     .slice(0, 5)
-
-  const locationMap = new Map((locations.data ?? []).map((l) => [l.id, l.name]))
-  const itemMap = new Map((items.data ?? []).map((i) => [i.id, i.name]))
-  const priceMap = new Map((items.data ?? []).map((i) => [i.id, i.price]))
 
   const txCountData = useMemo(
     () => (txsWithItems ? aggregateTransactionCounts(txsWithItems) : []),
@@ -164,8 +187,8 @@ function Dashboard() {
           <CardContent>
             {isLoading ? (
               <div className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <Skeleton key={index} className="h-10 w-full" />
                 ))}
               </div>
             ) : (
@@ -179,25 +202,30 @@ function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentTransactions.map((tx) => (
-                    <TableRow key={tx.id}>
+                  {recentTransactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
                       <TableCell>
-                        <Link to="/transactions/$id" params={{ id: tx.id }}>
-                          <TransactionTypeBadge type={tx.type} />
+                        <Link
+                          to="/transactions/$id"
+                          params={{ id: transaction.id }}
+                        >
+                          <TransactionTypeBadge type={transaction.type} />
                         </Link>
                       </TableCell>
                       <TableCell>
-                        {tx.fromLocationId
-                          ? (locationMap.get(tx.fromLocationId) ?? '—')
+                        {transaction.fromLocationId
+                          ? (locationMap.get(transaction.fromLocationId) ?? '—')
                           : '—'}
                       </TableCell>
                       <TableCell>
-                        {tx.toLocationId
-                          ? (locationMap.get(tx.toLocationId) ?? '—')
+                        {transaction.toLocationId
+                          ? (locationMap.get(transaction.toLocationId) ?? '—')
                           : '—'}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {new Date(tx.createdAt).toLocaleDateString('ja-JP')}
+                        {new Date(transaction.createdAt).toLocaleDateString(
+                          'ja-JP',
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -214,8 +242,8 @@ function Dashboard() {
           <CardContent>
             {isLoading ? (
               <div className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <Skeleton key={index} className="h-10 w-full" />
                 ))}
               </div>
             ) : lowStockItems.length === 0 ? (
@@ -226,36 +254,42 @@ function Dashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>商品</TableHead>
+                    <TableHead>バリアント</TableHead>
                     <TableHead>ロケーション</TableHead>
                     <TableHead>在庫数</TableHead>
                     <TableHead>ステータス</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {lowStockItems.slice(0, 10).map((inv) => (
-                    <TableRow key={inv.id}>
-                      <TableCell>
-                        <Link
-                          to="/items/$id"
-                          params={{ id: inv.itemId }}
-                          className="hover:underline"
-                        >
-                          {itemMap.get(inv.itemId) ?? inv.itemId}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        {locationMap.get(inv.locationId) ?? inv.locationId}
-                      </TableCell>
-                      <TableCell>{inv.quantity}</TableCell>
-                      <TableCell>
-                        <StockStatusBadge
-                          quantity={inv.quantity}
-                          safetyStock={inv.safetyStock}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {lowStockItems.slice(0, 10).map((inventory) => {
+                    const variant = variantMap.get(inventory.itemVariantId)
+                    return (
+                      <TableRow key={inventory.id}>
+                        <TableCell>
+                          <Link
+                            to="/item-variants/$id"
+                            params={{ id: inventory.itemVariantId }}
+                            className="hover:underline"
+                          >
+                            {variantNameMap.get(inventory.itemVariantId) ??
+                              variant?.sku ??
+                              inventory.itemVariantId}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {locationMap.get(inventory.locationId) ??
+                            inventory.locationId}
+                        </TableCell>
+                        <TableCell>{inventory.quantity}</TableCell>
+                        <TableCell>
+                          <StockStatusBadge
+                            quantity={inventory.quantity}
+                            safetyStock={inventory.safetyStock}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -332,7 +366,7 @@ function Dashboard() {
                   <YAxis
                     allowDecimals={false}
                     fontSize={12}
-                    tickFormatter={(v) => `¥${v.toLocaleString()}`}
+                    tickFormatter={(value) => `¥${value.toLocaleString()}`}
                   />
                   <Tooltip
                     formatter={(value) => [
@@ -344,7 +378,7 @@ function Dashboard() {
                     type="monotone"
                     dataKey="revenue"
                     name="売上"
-                    stroke="hsl(142, 71%, 45%)"
+                    stroke="hsl(221, 83%, 53%)"
                     strokeWidth={2}
                     dot={{ r: 3 }}
                   />

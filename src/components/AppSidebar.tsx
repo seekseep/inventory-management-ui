@@ -1,6 +1,7 @@
 import { Link, useMatches } from '@tanstack/react-router'
 import {
   ArrowRightLeft,
+  Boxes,
   ClipboardList,
   FolderTree,
   LayoutDashboard,
@@ -24,6 +25,7 @@ const navItems = [
   { to: '/', label: 'ダッシュボード', icon: LayoutDashboard },
   { to: '/item-categories', label: 'カテゴリ', icon: FolderTree },
   { to: '/items', label: '商品', icon: Package },
+  { to: '/item-variants', label: 'バリアント', icon: Boxes },
   { to: '/locations', label: 'ロケーション', icon: MapPin },
   { to: '/inventories', label: '在庫', icon: Warehouse },
   { to: '/transactions', label: '取引', icon: ArrowRightLeft },
