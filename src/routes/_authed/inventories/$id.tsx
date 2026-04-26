@@ -18,7 +18,7 @@ import { useInventory } from '#/lib/api/inventories'
 import { useItemVariants } from '#/lib/api/item-variants'
 import { useItems } from '#/lib/api/items'
 import { useLocations } from '#/lib/api/locations'
-import { useTransactionsWithItems } from '#/lib/api/transactions'
+import { useTransactions } from '#/lib/api/transactions'
 import { computeStockTimeline } from '#/lib/chart-utils'
 import { getItemVariantOptionLabel } from '#/lib/item-variant-display'
 
@@ -33,8 +33,7 @@ function InventorySingle() {
   const { data: variants } = useItemVariants()
   const { data: items } = useItems()
   const { data: locations } = useLocations()
-  const { data: txsWithItems, isLoading: isTxLoading } =
-    useTransactionsWithItems()
+  const { data: txsWithItems, isLoading: isTxLoading } = useTransactions()
 
   const variant = variants?.find(
     (entry) => entry.id === inventory?.itemVariantId,

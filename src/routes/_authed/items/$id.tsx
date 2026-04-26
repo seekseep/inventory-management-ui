@@ -27,7 +27,7 @@ import { useItemCategories } from '#/lib/api/item-categories'
 import { useItemVariants } from '#/lib/api/item-variants'
 import { useItem } from '#/lib/api/items'
 import { useLocations } from '#/lib/api/locations'
-import { useTransactionsWithItems } from '#/lib/api/transactions'
+import { useTransactions } from '#/lib/api/transactions'
 import {
   aggregateSalesByItem,
   aggregateTransactionsByItem,
@@ -87,8 +87,7 @@ function ItemSingle() {
   })
   const { data: inventories, isLoading: isInventoryLoading } = useInventories()
   const { data: locations } = useLocations()
-  const { data: txsWithItems, isLoading: isTxLoading } =
-    useTransactionsWithItems()
+  const { data: txsWithItems, isLoading: isTxLoading } = useTransactions()
 
   const categoryName = item?.itemCategoryId
     ? categories?.find((category) => category.id === item.itemCategoryId)?.name

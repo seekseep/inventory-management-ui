@@ -20,7 +20,7 @@ import { useInventories } from '#/lib/api/inventories'
 import { useItemVariants } from '#/lib/api/item-variants'
 import { useItems } from '#/lib/api/items'
 import { useLocation } from '#/lib/api/locations'
-import { useTransactionsWithItems } from '#/lib/api/transactions'
+import { useTransactions } from '#/lib/api/transactions'
 import { computeInventoryTimeline } from '#/lib/chart-utils'
 import {
   getItemVariantDisplayName,
@@ -78,8 +78,7 @@ function LocationSingle() {
   const { data: inventories } = useInventories({ locationId: id })
   const { data: variants } = useItemVariants()
   const { data: items } = useItems()
-  const { data: txsWithItems, isLoading: isTxLoading } =
-    useTransactionsWithItems()
+  const { data: txsWithItems, isLoading: isTxLoading } = useTransactions()
 
   const itemMap = new Map((items ?? []).map((item) => [item.id, item.name]))
   const variantMap = new Map(

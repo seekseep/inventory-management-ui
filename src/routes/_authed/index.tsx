@@ -31,13 +31,10 @@ import { useInventories } from '#/lib/api/inventories'
 import { useItemVariants } from '#/lib/api/item-variants'
 import { useItems } from '#/lib/api/items'
 import { useLocations } from '#/lib/api/locations'
-import {
-  useTransactions,
-  useTransactionsWithItems,
-} from '#/lib/api/transactions'
+import { useTransactions } from '#/lib/api/transactions'
 import { aggregateTransactionCounts } from '#/lib/chart-utils'
 import { getItemVariantDisplayName } from '#/lib/item-variant-display'
-import type { TransactionWithItems } from '#/lib/types'
+import type { Transaction } from '#/lib/types'
 
 export const Route = createFileRoute('/_authed/')({
   staticData: { title: 'ダッシュボード' },
@@ -73,7 +70,7 @@ function StatCard({
 }
 
 function computeSalesRevenue(
-  transactions: TransactionWithItems[],
+  transactions: Transaction[],
   priceMap: Map<string, number>,
 ) {
   const byDate = new Map<string, number>()
@@ -100,8 +97,6 @@ function Dashboard() {
   const locations = useLocations()
   const inventories = useInventories()
   const transactions = useTransactions()
-  const { data: txsWithItems, isLoading: isTxDetailLoading } =
-    useTransactionsWithItems()
 
   const isLoading =
     items.isLoading ||
@@ -139,13 +134,13 @@ function Dashboard() {
     .slice(0, 5)
 
   const txCountData = useMemo(
-    () => (txsWithItems ? aggregateTransactionCounts(txsWithItems) : []),
-    [txsWithItems],
+    () => (transactions.data ? aggregateTransactionCounts(transactions.data) : []),
+    [transactions.data],
   )
 
   const salesRevenueData = useMemo(
-    () => (txsWithItems ? computeSalesRevenue(txsWithItems, priceMap) : []),
-    [txsWithItems, priceMap],
+    () => (transactions.data ? computeSalesRevenue(transactions.data, priceMap) : []),
+    [transactions.data, priceMap],
   )
 
   return (
@@ -303,7 +298,7 @@ function Dashboard() {
             <CardTitle className="text-base">取引件数推移</CardTitle>
           </CardHeader>
           <CardContent>
-            {isTxDetailLoading ? (
+            {transactions.isLoading ? (
               <Skeleton className="h-64 w-full" />
             ) : txCountData.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
@@ -352,7 +347,7 @@ function Dashboard() {
             <CardTitle className="text-base">売上金額推移</CardTitle>
           </CardHeader>
           <CardContent>
-            {isTxDetailLoading ? (
+            {transactions.isLoading ? (
               <Skeleton className="h-64 w-full" />
             ) : salesRevenueData.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">

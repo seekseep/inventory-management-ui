@@ -1,4 +1,4 @@
-import type { TransactionWithItems } from '#/lib/types'
+import type { Transaction } from '#/lib/types'
 
 export interface DailyQuantity {
   date: string
@@ -21,7 +21,7 @@ function hasTargetVariant(
  * 特定の商品の売上数量を日別に集計する
  */
 export function aggregateSalesByItem(
-  transactions: TransactionWithItems[],
+  transactions: Transaction[],
   itemVariantIds: ReadonlySet<string>,
 ): DailyQuantity[] {
   const salesByDate = new Map<string, number>()
@@ -45,7 +45,7 @@ export function aggregateSalesByItem(
  * 特定の商品の取引タイプ別数量を日別に集計する
  */
 export function aggregateTransactionsByItem(
-  transactions: TransactionWithItems[],
+  transactions: Transaction[],
   itemVariantIds: ReadonlySet<string>,
 ): {
   date: string
@@ -109,7 +109,7 @@ export function aggregateTransactionsByItem(
  * トランザクションから現在在庫までの逆算で推移を復元
  */
 export function computeInventoryTimeline(
-  transactions: TransactionWithItems[],
+  transactions: Transaction[],
   locationId: string,
   currentInventories: { itemVariantId: string; quantity: number }[],
   itemVariantNames: Map<string, string>,
@@ -203,7 +203,7 @@ export function computeInventoryTimeline(
  * 特定のバリアント×ロケーションの在庫推移を計算する
  */
 export function computeStockTimeline(
-  transactions: TransactionWithItems[],
+  transactions: Transaction[],
   itemVariantId: string,
   locationId: string,
   currentQuantity: number,
@@ -252,7 +252,7 @@ export function computeStockTimeline(
  * 日別の取引件数を集計する
  */
 export function aggregateTransactionCounts(
-  transactions: TransactionWithItems[],
+  transactions: Transaction[],
 ): {
   date: string
   purchase: number

@@ -62,9 +62,6 @@ export interface Transaction {
   type: 'purchase' | 'transfer' | 'sale' | 'disposal'
   note: string | null
   createdAt: string
-}
-
-export interface TransactionWithItems extends Transaction {
   items: TransactionItem[]
 }
 
