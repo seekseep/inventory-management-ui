@@ -134,12 +134,14 @@ function Dashboard() {
     .slice(0, 5)
 
   const txCountData = useMemo(
-    () => (transactions.data ? aggregateTransactionCounts(transactions.data) : []),
+    () =>
+      transactions.data ? aggregateTransactionCounts(transactions.data) : [],
     [transactions.data],
   )
 
   const salesRevenueData = useMemo(
-    () => (transactions.data ? computeSalesRevenue(transactions.data, priceMap) : []),
+    () =>
+      transactions.data ? computeSalesRevenue(transactions.data, priceMap) : [],
     [transactions.data, priceMap],
   )
 

@@ -251,9 +251,7 @@ export function computeStockTimeline(
 /**
  * 日別の取引件数を集計する
  */
-export function aggregateTransactionCounts(
-  transactions: Transaction[],
-): {
+export function aggregateTransactionCounts(transactions: Transaction[]): {
   date: string
   purchase: number
   sale: number
